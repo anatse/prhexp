@@ -1,0 +1,43 @@
+<Queries>
+    <Query name="Goods">
+        <![CDATA[
+            select ID,
+                -- Bar code of the goods in the batch
+                BarCode,
+
+                -- Remains of the goods in the batch
+                Ost,
+                OstFirst,
+                OstLast,
+
+                -- Name of drugs in this batch
+                DrugsID->LastObj->FullName as DrugsFullName,
+                DrugsID->LastObj->ShortName as DrugsShortName,
+
+                -- Information about drugs from drugs reference
+                DrugsID->LastObj->EdIzm->LastObj->FullName as UnitFullName, -- SprEdi
+                DrugsID->LastObj->EdIzm->LastObj->ShortName as UnitShortName, -- SprEdi
+
+                -- Фасовка
+                DrugsID->LastObj->Fas,
+                DrugsID->LastObj->MNN->LastObj->FullName as MNN, -- SprMNN
+                DrugsID->LastObj->Producer->LastObj->FullName as ProducerFullName, -- SprProducer
+                DrugsID->LastObj->Producer->LastObj->ShortName as ProducerShortName, -- SprProducer
+                -- Кол-во в упаковке
+                DrugsID->LastObj->Upak as Packaging,
+                DrugsID->LastObj->TradeTech as TradeTech, -- SprTradeTech,
+                DrugsID->LastObj->DrugsID->LastObj->FullName as DrugFullName, -- SprDrugsFull
+
+                -- Name of the supplier (contractor)
+                DocDataID->Supplier->LastObj->FullName as SupplierFullName,
+                -- Retail price
+                DocDataID->CenaRozN as RetailPrice
+            from PartiesGoods
+            where 1 = 1
+                and Destroyed = 0
+        ]]>
+    </Query>
+    <Query name="Test">
+        <![CDATA[TestQuery]]>
+    </Query>
+</Queries>
