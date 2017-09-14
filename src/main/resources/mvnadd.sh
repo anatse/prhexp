@@ -1,0 +1,1 @@
+mvn install:install-file -Dfile=./cache-jdbc-2.0.0.jar -DgroupId=com.intersys -DartifactId=cache-jdbc -Dversion=2.0.0 -Dpackaging=jar
