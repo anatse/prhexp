@@ -33,8 +33,6 @@
                 -- Retail price
                 DocDataID->CenaRozN as RetailPrice
             from PartiesGoods
-            where 1 = 1
-                and Destroyed = 0
         ]]>
     </Query>
     <Query name="Test">

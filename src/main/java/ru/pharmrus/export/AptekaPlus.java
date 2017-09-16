@@ -59,9 +59,7 @@ public class AptekaPlus {
             BufferedReader br = new BufferedReader(isr);
 
             StringBuffer sb = new StringBuffer("");
-            br.lines().forEach(s -> {
-                sb.append(s).append("\n");
-            });
+            br.lines().forEach(s -> sb.append(s).append("\n"));
 
             Document doc = dBuilder.parse(new ByteArrayInputStream(sb.toString().getBytes("utf-8")));
             XPathFactory xpf = XPathFactory.newInstance();
@@ -72,23 +70,14 @@ public class AptekaPlus {
 
             return getCharacterDataFromElement (element);
         }
-        catch (SAXException e) {
-            debug (e.getMessage());
-        }
-        catch (IOException e) {
-            debug (e.getMessage());
-        }
-        catch (ParserConfigurationException e) {
-            debug (e.getMessage());
-        }
-        catch (XPathExpressionException e) {
+        catch (Exception e) {
             debug (e.getMessage());
         }
 
         return null;
     }
 
-    public static String getCharacterDataFromElement(Element e) {
+    private static String getCharacterDataFromElement(Element e) {
         NodeList list = e.getChildNodes();
         String data;
 
@@ -124,17 +113,20 @@ public class AptekaPlus {
                 columns.add (md.getColumnName(i));
             }
 
+            debug ("loaded columns: " + columns);
+
             List<Map<String, String>> rows = new ArrayList<>();
             while (rSet.next()) {
                 Map<String, String> row = new HashMap<>();
                 for (int i=1;i<=len;i++) {
-                    row.put(columns.get(i), rSet.getString(i));
+                    row.put(columns.get(i-1), rSet.getString(i));
                 }
 
                 rows.add(row);
             }
 
-            debug ("Results loaded.");
+            debug ("Results loaded: " + rows.size());
+            return rows;
         }
         catch (SQLException e) {
             debug (e.getMessage());
@@ -147,6 +139,7 @@ public class AptekaPlus {
     }
 
     public static String toJson (Object obj) {
+        debug ("Trying to serialize...");
         ObjectMapper mapper = new ObjectMapper();
         //mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         try {
@@ -172,7 +165,18 @@ public class AptekaPlus {
             AptekaPlus ap = new AptekaPlus(url, args[3], args[4]);
             List<Map<String, String>> goods = ap.loadGoods();
             // Store goods in json format
-            toJson (goods);
+            String result = toJson (goods);
+            debug ("converted to JSON");
+            if (args.length > 5) {
+                String fileName = args[5];
+                try (FileOutputStream fo = new FileOutputStream(fileName)) {
+                    fo.write(result.getBytes("utf-8"));
+                    debug ("saved to file: " + fileName);
+                }
+                catch (Exception e) {
+                    debug(e.getMessage());
+                }
+            }
         }
     }
 }
