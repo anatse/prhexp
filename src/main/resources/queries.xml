@@ -90,6 +90,32 @@
             where Destroyed = 0
         ]]>
     </Query>
+
+    <!-- Приходы -->
+    <Query name="Nomen">
+        <![CDATA[
+            SELECT
+                ID,
+                FlInOut,
+                Docs->Titles->CodeOfSupplier as Suppl,
+                Docs->DocType->TableName as Tabl,
+                Docs->Status1,
+                Docs->Titles->DateOfSupplier,
+                Docs->Titles->CodeofSupplier->LastObj->FullName,
+                Docs->Titles->NumberOfNakl,
+                DateRec,Docs->Titles->NDok,
+                sumCenaZak,
+                sumCenaNDS,
+                sumCenaRozN
+            FROM
+                DocData
+            WHERE
+                Destroyed = 0 and FlInOut=1
+                and Docs->Titles->CodeOfSupplier is not null and Docs->DocType->TableName<>100
+                and Docs->DocType->TableName <> 106
+        ]]>
+    </Query>
+
     <Query name="Test">
         <![CDATA[TestQuery]]>
     </Query>

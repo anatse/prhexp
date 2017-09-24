@@ -257,7 +257,7 @@ public class AptekaPlus {
                 }
 
                 try (FileOutputStream fo = new FileOutputStream(fileName)) {
-                    fo.write(result.getBytes("utf-8"));
+                    fo.write(result.getBytes("cp1251"));
                     debug ("saved to file: " + fileName);
                 }
                 catch (Exception e) {
