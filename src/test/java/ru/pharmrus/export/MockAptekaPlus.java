@@ -55,7 +55,7 @@ public class MockAptekaPlus {
         AptekaPlus apmock = mock(AptekaPlus.class);
 
         // LoadGoods function
-        when(apmock.loadGoods()).thenReturn(getPreparedData());
+        when(apmock.loadGoods("Goods")).thenReturn(getPreparedData());
 
         return apmock;
     }

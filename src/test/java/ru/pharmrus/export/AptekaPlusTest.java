@@ -22,7 +22,7 @@ class AptekaPlusTest {
 
     @Test
     void loadGoods() {
-        List<Map<String, String>> maps = aptekaPlus.loadGoods();
+        List<Map<String, String>> maps = aptekaPlus.loadGoods("Goods");
         assertEquals (maps, MockAptekaPlus.getPreparedData());
     }
 

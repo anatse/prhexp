@@ -17,6 +17,7 @@ import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.intersys.jdbc.*;
 
@@ -93,11 +94,11 @@ public class AptekaPlus {
         return "";
     }
 
-    public List<Map<String, String>> loadGoods () {
+    public List<Map<String, String>> loadGoods (String queryName) {
         // load XML query
         debug ("loading query from resource...");
 
-        String query = loadQuery("Goods");
+        String query = loadQuery(queryName);
 
         debug ("Ok. Trying to connect to " + url + "...");
 
@@ -138,6 +139,76 @@ public class AptekaPlus {
         return Collections.emptyList();
     }
 
+    public String loadQueryDataCSV (String queryName) {
+        // load XML query
+        debug ("loading query from resource...");
+
+        String query = loadQuery(queryName);
+
+        debug ("query: " + query);
+
+        debug ("Ok. Trying to connect to " + url + "...");
+
+        final StringBuffer sb = new StringBuffer();
+        final char delimiter = ';';
+        final char quotes = '"'; // Quotes symbol for strings
+
+        try (Connection con = connect();
+             PreparedStatement stmt = con.prepareStatement(query);
+             ResultSet rSet = stmt.executeQuery()) {
+            debug ("Statement executed.");
+
+            ResultSetMetaData md = rSet.getMetaData();
+            int len = md.getColumnCount();
+            List<String> columns = new ArrayList<>(len);
+            for (int i=1;i<=len;i++) {
+                String colName = md.getColumnName(i);
+                columns.add (colName);
+                // Always in quotes
+                sb.append(quotes).append(colName).append(quotes);
+                sb.append(delimiter);
+            }
+
+            debug ("loaded columns: " + columns);
+            int rows = 0;
+            while (rSet.next()) {
+                sb.append("\n"); // New line added
+
+                for (int i=1;i<=len;i++) {
+                    String colValue = rSet.getString(i);
+                    switch (md.getColumnType(i)) {
+                        case Types.DECIMAL:
+                        case Types.NUMERIC:
+                        case Types.DOUBLE:
+                        case Types.BIGINT:
+                        case Types.FLOAT:
+                        case Types.INTEGER:
+                        case Types.SMALLINT:
+                            sb.append(colValue);
+                            sb.append(delimiter);
+                            break;
+
+                        default:
+                            sb.append(quotes).append(colValue).append(quotes);
+                            sb.append(delimiter);
+                    }
+                }
+
+                rows++;
+            }
+
+            debug ("Results loaded: " + rows);
+        }
+        catch (SQLException e) {
+            debug (e.getMessage());
+        }
+        catch (ClassNotFoundException e) {
+            debug (e.getMessage());
+        }
+
+        return sb.toString();
+    }
+
     public static String toJson (Object obj) {
         debug ("Trying to serialize...");
         ObjectMapper mapper = new ObjectMapper();
@@ -151,24 +222,40 @@ public class AptekaPlus {
     }
 
     public static void main (String[] args) {
-        if (args.length < 5) {
-            System.out.println("Usage: phrexp host port dbname username password\n" +
+        if (args.length < 6) {
+            System.out.println("Usage: phrexp host port dbname username password queryName [fileName] [format]\n" +
                     "where host: hostname or ip address of database computer\n" +
                     "      port: TCP port of database listener\n" +
                     "      dbname: database name\n" +
                     "      username: login of database user\n" +
                     "      password: password for database user defined in previous parameter\n" +
+                    "      queryName: name of query to execute\n" +
+                    "      fileName: output file name\n" +
+                    "      format: json or csv\n" +
                     "Example: phrexp localhost 1972 SAMPLE admin 123456");
         }
         else {
             String url = String.format("jdbc:Cache://%s:%s/%s", args[0], args[1], args[2]);
             AptekaPlus ap = new AptekaPlus(url, args[3], args[4]);
-            List<Map<String, String>> goods = ap.loadGoods();
-            // Store goods in json format
-            String result = toJson (goods);
-            debug ("converted to JSON");
-            if (args.length > 5) {
-                String fileName = args[5];
+
+            // Store information
+            if (args.length > 6) {
+                String result;
+
+                String fileName = args[6];
+                String format = args.length > 6 ? args[7] : "json";
+
+                switch (format.toLowerCase()) {
+                    case "csv":
+                        result = ap.loadQueryDataCSV (args[5]);
+                        break;
+
+                    case "json":
+                    default:
+                        result = toJson (ap.loadGoods(args[5]));
+                        debug ("converted to JSON");
+                }
+
                 try (FileOutputStream fo = new FileOutputStream(fileName)) {
                     fo.write(result.getBytes("utf-8"));
                     debug ("saved to file: " + fileName);
@@ -176,6 +263,11 @@ public class AptekaPlus {
                 catch (Exception e) {
                     debug(e.getMessage());
                 }
+            }
+            else {
+                debug ("----------------- begin JSON output ---------------");
+                System.out.println (toJson (ap.loadGoods(args[5])));
+                debug ("----------------- end output ---------------");
             }
         }
     }

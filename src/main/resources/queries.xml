@@ -35,6 +35,61 @@
             from PartiesGoods
         ]]>
     </Query>
+    <!--
+        Выгрузка номенклатуры - Nomen
+            Код
+            Наименование
+            Родитель
+            Артикул
+            Вид номенклатуры
+            Единица
+            Полное наименование
+            Комментарий
+            Услуга
+            Номенклатурная группа
+            Страна происхождения
+            Номер ГТД
+            Статья затрат
+            Спецификация
+            Производитель
+            Импортер
+            ТН ВЭД
+            ОКВЭД
+            ОКП
+            % НДС
+            Меховое изделие
+            Периодичность услуги
+            Код операции для раздела 7 декларации по НДС
+    -->
+    <Query name="Nomen">
+        <![CDATA[
+            select LastObj->UniqCode as ID,
+                LastObj->ShortName as Name,
+                LastObj->Parent->FullName as ParentName,
+                "" as Atricul,
+                "" as VidNomenklatura,
+                LastObj->EdIzm->LastObj->FullName as UnitFullName,
+                LastObj->FullName as FullName,
+                "" as Comment,
+                0 as Service,
+                "" as NomGroup,
+                LastObj->DrugsID->LastObj->Country->FullName as Country,
+                "" as GTD,
+                "" as Cost, -- Статья затрат
+                LastObj->DrugsID->LastObj->Specif,
+                LastObj->Producer->LastObj->FullName as Producer,
+                LastObj->DrugsID as Supplier, -- Импортер
+                "" as TnVED,
+                "" as OKVED,
+                "" as OKP,
+                LastObj->TypeNal->LastObj->FullName as NdsPerc,
+                0 as Fur, -- Меховое изделие
+                "" as Period,
+                "" as OperCode
+            from SprDrugs
+            where Destroyed = 0
+        ]]>
+    </Query>
     <Query name="Test">
         <![CDATA[TestQuery]]>
     </Query>
