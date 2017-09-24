@@ -65,34 +65,59 @@
         <![CDATA[
             select LastObj->UniqCode as ID,
                 LastObj->ShortName as Name,
-                LastObj->Parent->FullName as ParentName,
-                "" as Atricul,
-                "" as VidNomenklatura,
-                LastObj->EdIzm->LastObj->FullName as UnitFullName,
                 LastObj->FullName as FullName,
-                "" as Comment,
-                0 as Service,
-                "" as NomGroup,
-                LastObj->DrugsID->LastObj->Country->FullName as Country,
-                "" as GTD,
-                "" as Cost, -- Статья затрат
-                LastObj->DrugsID->LastObj->Specif,
+                LastObj->EdIzm->LastObj->ShortName as UnitShortName,
                 LastObj->Producer->LastObj->FullName as Producer,
-                LastObj->DrugsID as Supplier, -- Импортер
-                "" as TnVED,
-                "" as OKVED,
-                "" as OKP,
-                LastObj->TypeNal->LastObj->FullName as NdsPerc,
-                0 as Fur, -- Меховое изделие
-                "" as Period,
-                "" as OperCode
+                LastObj->TypeNal->LastObj->FullName as NdsPerc
             from SprDrugs
             where Destroyed = 0
         ]]>
     </Query>
 
+    <!--
+        Накладные
+        ***
+        Номенклатура
+        Единица
+        Количество
+        Цена
+        Сумма
+        % НДС
+        НДС
+        Страна происхождения
+        Цена в рознице
+        Сумма в рознице
+        % НДС в рознице
+        Комитент
+    -->
+    <Query name="InvoiceRow">
+        <![CDATA[
+            select
+                Drugs->LastObj->FullName,
+                Edizm->LastObj->ShortName,
+                Quantity,
+                CenaZak,
+                sumCenaZak,
+                Drugs->LastObj->TypeNal->LastObj->FullName as NdsPerc,
+                DocData.sumCenaNDS,
+                Country->ShortName as Country,
+                cenaRozN,
+                sumCenaRozN,
+                PercSaleNDS,
+                Docs->Titles->NumberOfNakl,
+                Docs->Titles->CodeofSupplier->LastObj->FullName as Supplier
+            FROM
+                DocData
+            WHERE
+                Destroyed = 0 and FlInOut=1
+                and Docs->Titles->CodeOfSupplier is not null and Docs->DocType->TableName<>100
+                and Docs->DocType->TableName <> 106
+                --and Docs->Titles->NumberOfNakl = "2423602-30"
+        ]]>
+    </Query>
+
     <!-- Приходы -->
-    <Query name="Nomen">
+    <Query name="Income">
         <![CDATA[
             SELECT
                 ID,
@@ -103,7 +128,8 @@
                 Docs->Titles->DateOfSupplier,
                 Docs->Titles->CodeofSupplier->LastObj->FullName,
                 Docs->Titles->NumberOfNakl,
-                DateRec,Docs->Titles->NDok,
+                DateRec,
+                Docs->Titles->NDok,
                 sumCenaZak,
                 sumCenaNDS,
                 sumCenaRozN
