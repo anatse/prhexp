@@ -184,11 +184,18 @@ public class AptekaPlus {
                         case Types.FLOAT:
                         case Types.INTEGER:
                         case Types.SMALLINT:
+                            if (colValue != null) {
+                                colValue = colValue.replaceAll("\\.", ",");
+                            }
                             sb.append(colValue);
                             sb.append(delimiter);
                             break;
 
                         default:
+                            if (colValue != null) {
+                                colValue = colValue.replaceAll("НДС[^\\d]+(\\d+\\%).*", "$1");
+                                colValue = colValue.replaceAll("(Без НДС).*", "$1");
+                            }
                             sb.append(quotes).append(colValue).append(quotes);
                             sb.append(delimiter);
                     }
@@ -221,7 +228,7 @@ public class AptekaPlus {
         }
     }
 
-    public static void main (String[] args) {
+    public static void main (String[] args) throws UnsupportedEncodingException {
         if (args.length < 6) {
             System.out.println("Usage: phrexp host port dbname username password queryName [fileName] [format]\n" +
                     "where host: hostname or ip address of database computer\n" +
@@ -240,24 +247,24 @@ public class AptekaPlus {
 
             // Store information
             if (args.length > 6) {
-                String result;
+                byte[] result;
 
                 String fileName = args[6];
                 String format = args.length > 6 ? args[7] : "json";
 
                 switch (format.toLowerCase()) {
                     case "csv":
-                        result = ap.loadQueryDataCSV (args[5]);
+                        result = ap.loadQueryDataCSV (args[5]).getBytes("cp1251");
                         break;
 
                     case "json":
                     default:
-                        result = toJson (ap.loadGoods(args[5]));
+                        result = toJson (ap.loadGoods(args[5])).getBytes("utf-8");
                         debug ("converted to JSON");
                 }
 
                 try (FileOutputStream fo = new FileOutputStream(fileName)) {
-                    fo.write(result.getBytes("cp1251"));
+                    fo.write(result);
                     debug ("saved to file: " + fileName);
                 }
                 catch (Exception e) {

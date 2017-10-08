@@ -33,6 +33,11 @@
                 -- Retail price
                 DocDataID->CenaRozN as RetailPrice
             from PartiesGoods
+	    where 1=1
+             and KprID = 1
+             and DayFirst < {fn CURDATE}
+             and DayLast != 99999
+        order by ost desc
         ]]>
     </Query>
     <!--
@@ -63,14 +68,17 @@
     -->
     <Query name="Nomen">
         <![CDATA[
-            select LastObj->UniqCode as ID,
-                LastObj->ShortName as Name,
-                LastObj->FullName as FullName,
-                LastObj->EdIzm->LastObj->ShortName as UnitShortName,
-                LastObj->Producer->LastObj->FullName as Producer,
-                LastObj->TypeNal->LastObj->FullName as NdsPerc
-            from SprDrugs
-            where Destroyed = 0
+            select Drugs->UniqCode as ID,
+                Drugs->ShortName as Name,
+                Drugs->FullName as FullName,
+                Drugs->EdIzm->ShortName as UnitShortName,
+                Drugs->Producer->FullName as Producer,
+                Drugs->TypeNal->FullName as NdsPerc
+             FROM
+                DocData
+            WHERE
+                Destroyed = 0
+		and FlInOut=1
         ]]>
     </Query>
 
@@ -112,7 +120,6 @@
                 Destroyed = 0 and FlInOut=1
                 and Docs->Titles->CodeOfSupplier is not null and Docs->DocType->TableName<>100
                 and Docs->DocType->TableName <> 106
-                --and Docs->Titles->NumberOfNakl = "2423602-30"
         ]]>
     </Query>
 
@@ -141,6 +148,55 @@
                 and Docs->DocType->TableName <> 106
         ]]>
     </Query>
+
+    <Query name="Vidal">
+        <![CDATA[
+            select * from Vidal.Product
+        ]]>
+    </Query>
+
+    <Query name="Tables">
+        <![CDATA[
+            select * from SQLUser.TablesList
+        ]]>
+    </Query>
+
+    <Query name="SoldDrugs">
+        <![CDATA[
+        select CenaRoz, CenaRozN, sumCenaRoz, sumCenaRozN, DataID, Drugs->FullName as DrugFullName,
+             Quantity, QuantityA, Received, UniqCode,
+             DrugsAnalog->FullName as DrugAnalog, comment, discount, docnpp,
+             listref, NumberKKM, parent->Drugs->FullName
+         from DocData
+         where 1=1
+             and FlInOut = -1 --and FlInOut <> 1
+             and destroyed = 0
+        ]]>
+    </Query>
+
+    <Query name="BoughtDrugs">
+        <![CDATA[
+        select CenaRoz, CenaRozN, sumCenaRoz, sumCenaRozN, DataID, Drugs->FullName as DrugFullName,
+             Quantity, QuantityA, Received, UniqCode,
+             DrugsAnalog->FullName as DrugAnalog, comment, discount, docnpp,
+             listref, NumberKKM, parent->Drugs->FullName
+         from DocData
+         where 1=1
+             and FlInOut = 1
+             and destroyed = 0
+        ]]>
+    </Query>
+
+    <Query name="Profit">
+        <![CDATA[
+          select DateReg, Docs, NDok, NumberKKM, SumCenaRoz, SumCenaZak, SumDiscount, TimeCreate, TypeTables, ZReport,
+            SumCenaRoz - SumCenaZak as Profit
+         from doctitles
+         where FlInOut = -1 and Destroyed = 0
+         order by DateReg desc
+        ]]>
+    </Query>
+
 
     <Query name="Test">
         <![CDATA[TestQuery]]>
