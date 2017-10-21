@@ -193,7 +193,7 @@
             SumDiscount
          from doctitles
          where FlInOut = -1 and Destroyed = 0
-            and ID = "256"
+            and ID = "238"
          order by DateReg desc
         ]]>
     </Query>
