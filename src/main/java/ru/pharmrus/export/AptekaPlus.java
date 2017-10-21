@@ -25,13 +25,13 @@ public class AptekaPlus {
 
     private static final SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.YYYY HH:mm");
 
-    public AptekaPlus(String url, String userName, String password) {
+    private AptekaPlus(String url, String userName, String password) {
         this.url = url;
         this.userName = userName;
         this.password = password;
     }
 
-    protected Connection connect() throws ClassNotFoundException, SQLException {
+    private Connection connect() throws ClassNotFoundException, SQLException {
         CacheDataSource ds = new CacheDataSource();
         ds.setURL(url);
         ds.setUser(userName);
@@ -41,13 +41,13 @@ public class AptekaPlus {
         return con;
     }
 
-    protected static void debug (String message) {
+    private static void debug(String message) {
         Date dt = new Date();
         String sDate = fmt.format(dt);
         System.out.printf("%s: %s\n", sDate, message);
     }
 
-    public static Query loadQuery (String queryName) {
+    static Query loadQuery(String queryName) {
         try {
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
@@ -133,13 +133,24 @@ public class AptekaPlus {
         return row;
     }
 
-    public List<Map<String, ?>> loadGoods (String queryName) {
+    @SuppressWarnings("unchecked")
+    List<Map<String, ?>> loadGoods(String queryName) {
         // load XML query
         debug ("loading query from resource...");
         Query query = loadQuery(queryName);
+        if (query == null) {
+            debug ("Query with name: " + queryName + " not found");
+            return Collections.EMPTY_LIST;
+        }
+
         if (query.getDependOn() != null) {
             // There is only one dependency level allowed
             Query parent = loadQuery(query.getDependOn());
+            if (parent == null) {
+                debug ("Parent with name: " + query.getDependOn() + " not found");
+                return Collections.EMPTY_LIST;
+            }
+
             parent.setChild(query);
             query = parent;
         }
@@ -182,27 +193,30 @@ public class AptekaPlus {
             debug ("Results loaded: " + rows.size());
             return rows;
         }
-        catch (SQLException e) {
-            debug (e.getMessage());
-        }
-        catch (ClassNotFoundException e) {
+        catch (Exception e) {
             debug (e.getMessage());
         }
 
         return Collections.emptyList();
     }
 
-    public String loadQueryDataCSV (String queryName) {
+    private String loadQueryDataCSV(String queryName) {
         // load XML query
         debug ("loading query from resource...");
 
-        String query = loadQuery(queryName).getQuery();
+        Query q = loadQuery(queryName);
+        if (q == null) {
+            debug ("Query with name: " + queryName + " not found");
+            return "";
+        }
+
+        String query = q.getQuery();
 
         debug ("query: " + query);
 
         debug ("Ok. Trying to connect to " + url + "...");
 
-        final StringBuffer sb = new StringBuffer();
+        final StringBuilder sb = new StringBuilder();
         final char delimiter = ';';
         final char quotes = '"'; // Quotes symbol for strings
 
@@ -259,25 +273,21 @@ public class AptekaPlus {
 
             debug ("Results loaded: " + rows);
         }
-        catch (SQLException e) {
-            debug (e.getMessage());
-        }
-        catch (ClassNotFoundException e) {
+        catch (Exception e) {
             debug (e.getMessage());
         }
 
         return sb.toString();
     }
 
-    public static String toJson (Object obj) {
+    static String toJson(Object obj) {
         debug ("Trying to serialize...");
         ObjectMapper mapper = new ObjectMapper();
-        //mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         try {
             return mapper.writeValueAsString(obj);
         } catch (JsonProcessingException e) {
             debug(e.getMessage());
-            return null;
+            return "";
         }
     }
 
@@ -303,7 +313,7 @@ public class AptekaPlus {
                 byte[] result;
 
                 String fileName = args[6];
-                String format = args.length > 6 ? args[7] : "json";
+                String format = args[7];
 
                 switch (format.toLowerCase()) {
                     case "csv":
