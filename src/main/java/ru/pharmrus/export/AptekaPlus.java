@@ -171,7 +171,7 @@ public class AptekaPlus {
                             childRows.add(childRow);
                         }
 
-                        row.put("children", childRows);
+                        row.put("Zchild", childRows);
                         childSet.close();
                     }
                 }
