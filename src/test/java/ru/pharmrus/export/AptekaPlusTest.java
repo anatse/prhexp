@@ -22,15 +22,15 @@ class AptekaPlusTest {
 
     @Test
     void loadGoods() {
-        List<Map<String, String>> maps = aptekaPlus.loadGoods("Goods");
+        List<Map<String, ?>> maps = aptekaPlus.loadGoods("Goods");
         assertEquals (maps, MockAptekaPlus.getPreparedData());
     }
 
     @Test
     void loadQuery () {
-        String query = AptekaPlus.loadQuery("Test");
+        Query query = AptekaPlus.loadQuery("Test");
         assertNotNull (query);
-        assertEquals(query, "TestQuery");
+        assertEquals(query.getQuery(), "TestQuery");
     }
 
     @Test

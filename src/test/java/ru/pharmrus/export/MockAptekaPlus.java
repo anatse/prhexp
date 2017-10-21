@@ -8,8 +8,8 @@ import java.util.Map;
 import static org.mockito.Mockito.*;
 
 public class MockAptekaPlus {
-    private static List<Map<String, String>> preparedData = prepareGoodsValues();
-    private static List<Map<String, String>> prepareGoodsValues () {
+    private static List<Map<String, ?>> preparedData = prepareGoodsValues();
+    private static List<Map<String, ?>> prepareGoodsValues () {
         return Arrays.asList(
             toMap(
                 v("ID", "10001"),
@@ -33,7 +33,7 @@ public class MockAptekaPlus {
         );
     }
 
-    public static List<Map<String, String>> getPreparedData () {
+    public static List<Map<String, ?>> getPreparedData () {
         return preparedData;
     }
 

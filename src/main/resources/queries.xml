@@ -102,10 +102,10 @@
         <![CDATA[
             select
                 Drugs->LastObj->FullName,
-                Edizm->LastObj->ShortName,
+                Drugs->LastObj->ShortName,
                 Quantity,
-                CenaZak,
-                sumCenaZak,
+                CenaUch,
+                sumCenaUch,
                 Drugs->LastObj->TypeNal->LastObj->FullName as NdsPerc,
                 DocData.sumCenaNDS,
                 Country->ShortName as Country,
@@ -113,7 +113,8 @@
                 sumCenaRozN,
                 PercSaleNDS,
                 Docs->Titles->NumberOfNakl,
-                Docs->Titles->CodeofSupplier->LastObj->FullName as Supplier
+                Docs->Titles->CodeofSupplier->LastObj->FullName as Supplier,
+                Comment
             FROM
                 DocData
             WHERE
@@ -161,16 +162,58 @@
         ]]>
     </Query>
 
-    <Query name="SoldDrugs">
+    <Query name="Sold">
         <![CDATA[
-        select CenaRoz, CenaRozN, sumCenaRoz, sumCenaRozN, DataID, Drugs->FullName as DrugFullName,
-             Quantity, QuantityA, Received, UniqCode,
-             DrugsAnalog->FullName as DrugAnalog, comment, discount, docnpp,
-             listref, NumberKKM, parent->Drugs->FullName
+         select ID as TitleID,
+            DateReg,
+            Docs,
+            NDok,
+            NumberKKM,
+            SumCenaRoz,
+            SumCenaZak,
+            SumDiscount,
+            TimeCreate,
+            TypeTables,
+            ZReport,
+            SumCenaRoz - SumCenaZak - SumDiscount as Profit
+         from doctitles
+         where FlInOut = -1 and Destroyed = 0
+         order by DateReg desc
+        ]]>
+    </Query>
+
+    <Query name="DocTitles">
+        <![CDATA[
+         select ID as TitleID,
+            DateReg,
+            NumberKKM,
+            SumDiscount,
+            ZReport
+         from doctitles
+         where FlInOut = -1 and Destroyed = 0
+         order by DateReg desc
+        ]]>
+    </Query>
+
+    <Query name="SoldDrugs" dependsOn="DocTitles" parameters="TitleID">
+        <![CDATA[
+        select
+             Drugs->FullName as DrugFullName,
+             Quantity,
+             CenaRoz,
+             sumCenaRoz,
+             Drugs->TypeNal->FullName as NdsPerc,
+             CenaNDS,
+             sumCenaNDS,
+             Quantity,
+             comment,
+             docnpp,
+             Drugs->FullName as DrugFullName
          from DocData
          where 1=1
-             and FlInOut = -1 --and FlInOut <> 1
+             and FlInOut = -1
              and destroyed = 0
+             and Docs->Titles->ID = ?
         ]]>
     </Query>
 
@@ -189,8 +232,8 @@
 
     <Query name="Profit">
         <![CDATA[
-          select DateReg, Docs, NDok, NumberKKM, SumCenaRoz, SumCenaZak, SumDiscount, TimeCreate, TypeTables, ZReport,
-            SumCenaRoz - SumCenaZak as Profit
+         select DateReg, Docs, NDok, NumberKKM, SumCenaRoz, SumCenaZak, SumDiscount, TimeCreate, TypeTables, ZReport,
+            SumCenaRoz - SumCenaZak - SumDiscount as Profit
          from doctitles
          where FlInOut = -1 and Destroyed = 0
          order by DateReg desc

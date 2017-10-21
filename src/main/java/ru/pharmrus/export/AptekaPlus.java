@@ -3,21 +3,17 @@ package ru.pharmrus.export;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.w3c.dom.*;
-import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.*;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.intersys.jdbc.*;
 
@@ -51,7 +47,7 @@ public class AptekaPlus {
         System.out.printf("%s: %s\n", sDate, message);
     }
 
-    public static String loadQuery (String queryName) {
+    public static Query loadQuery (String queryName) {
         try {
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
@@ -68,8 +64,16 @@ public class AptekaPlus {
 
             String xpathQuery = String.format("/Queries/Query[@name='%s']", queryName);
             Element element = (Element) xpath.evaluate(xpathQuery, doc, XPathConstants.NODE);
+            Query query = new Query();
 
-            return getCharacterDataFromElement (element);
+            query.setDependOn(element.getAttribute("dependsOn"));
+            String params = element.getAttribute("parameters");
+            if (params != null)
+                query.setParameters(params.split(","));
+
+            query.setName(queryName);
+            query.setQuery(getCharacterDataFromElement (element));
+            return query;
         }
         catch (Exception e) {
             debug (e.getMessage());
@@ -94,33 +98,82 @@ public class AptekaPlus {
         return "";
     }
 
-    public List<Map<String, String>> loadGoods (String queryName) {
+    private List<String> prepareMetaData (ResultSet rSet) throws SQLException {
+        ResultSetMetaData md = rSet.getMetaData();
+        int len = md.getColumnCount();
+        List<String> columns = new ArrayList<>(len);
+        for (int i=1;i<=len;i++) {
+            columns.add (md.getColumnName(i));
+        }
+
+        debug ("loaded columns: " + columns);
+        return columns;
+    }
+
+    private String getNdsString (String colValue) throws SQLException {
+        if (colValue != null) {
+            colValue = colValue.replaceAll("НДС[^\\d]+(\\d+\\%).*", "$1");
+            colValue = colValue.replaceAll("(Без НДС).*", "$1");
+        }
+
+        return colValue;
+    }
+
+    private Map<String, Object> fillRow (List<String> columns, ResultSet rSet) throws SQLException {
+        Map<String, Object> row = new HashMap<>();
+        for (int i=1;i<=columns.size();i++) {
+            String value = rSet.getString(i);
+            if (columns.get(i-1).toLowerCase().contains("nds")) {
+                value = getNdsString (value);
+            }
+
+            row.put(columns.get(i-1), value);
+        }
+
+        return row;
+    }
+
+    public List<Map<String, ?>> loadGoods (String queryName) {
         // load XML query
         debug ("loading query from resource...");
-
-        String query = loadQuery(queryName);
+        Query query = loadQuery(queryName);
+        if (query.getDependOn() != null) {
+            // There is only one dependency level allowed
+            Query parent = loadQuery(query.getDependOn());
+            parent.setChild(query);
+            query = parent;
+        }
 
         debug ("Ok. Trying to connect to " + url + "...");
 
         try (Connection con = connect();
-             PreparedStatement stmt = con.prepareStatement(query);
+             PreparedStatement stmt = con.prepareStatement(query.getQuery());
              ResultSet rSet = stmt.executeQuery()) {
             debug ("Statement executed.");
+            List<String> columns = prepareMetaData(rSet);
 
-            ResultSetMetaData md = rSet.getMetaData();
-            int len = md.getColumnCount();
-            List<String> columns = new ArrayList<>(len);
-            for (int i=1;i<=len;i++) {
-                columns.add (md.getColumnName(i));
-            }
-
-            debug ("loaded columns: " + columns);
-
-            List<Map<String, String>> rows = new ArrayList<>();
+            List<Map<String, ?>> rows = new ArrayList<>();
             while (rSet.next()) {
-                Map<String, String> row = new HashMap<>();
-                for (int i=1;i<=len;i++) {
-                    row.put(columns.get(i-1), rSet.getString(i));
+                Map<String, Object> row = fillRow(columns, rSet);
+
+                // Execute subquery if exists
+                if (query.getChild() != null) {
+                    try (PreparedStatement childStmt = con.prepareStatement(query.getChild().getQuery())) {
+                        for (int i = 0; i < query.getChild().getParameters().length; i++) {
+                            childStmt.setString(i + 1, (String)row.get(query.getChild().getParameters()[i]));
+                        }
+
+                        ResultSet childSet = childStmt.executeQuery();
+                        List<String> childColumns = prepareMetaData(childSet);
+                        List<Map<String, ?>> childRows = new ArrayList<>();
+                        while (childSet.next()) {
+                            Map<String, Object> childRow = fillRow(childColumns, childSet);
+                            childRows.add(childRow);
+                        }
+
+                        row.put("children", childRows);
+                        childSet.close();
+                    }
                 }
 
                 rows.add(row);
@@ -143,7 +196,7 @@ public class AptekaPlus {
         // load XML query
         debug ("loading query from resource...");
 
-        String query = loadQuery(queryName);
+        String query = loadQuery(queryName).getQuery();
 
         debug ("query: " + query);
 
