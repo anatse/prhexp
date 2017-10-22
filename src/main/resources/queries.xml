@@ -69,7 +69,7 @@
     <Query name="Nomen">
         <![CDATA[
             select Drugs->UniqCode as ID,
-                coalesce(Drugs->ShortName, substr(Drugs->FullName, 1, 100)) as Name,
+                substr(coalesce(Drugs->ShortName, Drugs->FullName), 1, 100) as Name,
                 Drugs->FullName as FullName,
                 Drugs->EdIzm->ShortName as UnitShortName,
                 Drugs->Producer->FullName as Producer,
@@ -102,7 +102,7 @@
     <Query name="InvoiceRow">
         <![CDATA[
             select
-                coalesce (Drugs->LastObj->ShortName, substr(Drugs->LastObj->FullName, 1, 100)) as ShortName,
+                substr (coalesce (Drugs->LastObj->ShortName, Drugs->LastObj->FullName), 1, 100) as ShortName,
                 Drugs->LastObj->FullName,
                 Quantity,
                 CenaUch,
@@ -195,7 +195,7 @@
             SumDiscount
          from doctitles
          where FlInOut = -1 and Destroyed = 0
-            and ID = "238"
+            --and ID = "238"
          order by DateReg desc
         ]]>
     </Query>
@@ -204,7 +204,7 @@
         <![CDATA[
         select
              Drugs->FullName as DrugFullName,
-             coalesce (Drugs->ShortName, substr(Drugs->FullName, 1, 100)) as DrugShortName,
+             substr(coalesce (Drugs->ShortName, Drugs->FullName), 1, 100) as DrugShortName,
              Quantity,
              CenaRoz,
              sumCenaRoz,
