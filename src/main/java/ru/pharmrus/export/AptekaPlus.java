@@ -71,6 +71,8 @@ public class AptekaPlus {
             if (params != null)
                 query.setParameters(params.split(","));
 
+            String extWhere = element.getAttribute("extWhere");
+            query.setExtWhere(extWhere);
             query.setName(queryName);
             query.setQuery(getCharacterDataFromElement (element));
             return query;
@@ -134,7 +136,9 @@ public class AptekaPlus {
     }
 
     @SuppressWarnings("unchecked")
-    List<Map<String, ?>> loadGoods(String queryName) {
+    List<Map<String, ?>> loadGoods(String queryName, String ... params) {
+        debug("params length: " + params.length);
+
         // load XML query
         debug ("loading query from resource...");
         Query query = loadQuery(queryName);
@@ -157,41 +161,49 @@ public class AptekaPlus {
 
         debug ("Ok. Trying to connect to " + url + "...");
 
-        try (Connection con = connect();
-             PreparedStatement stmt = con.prepareStatement(query.getQuery());
-             ResultSet rSet = stmt.executeQuery()) {
-            debug ("Statement executed.");
-            List<String> columns = prepareMetaData(rSet);
-
-            List<Map<String, ?>> rows = new ArrayList<>();
-            while (rSet.next()) {
-                Map<String, Object> row = fillRow(columns, rSet);
-
-                // Execute subquery if exists
-                if (query.getChild() != null) {
-                    try (PreparedStatement childStmt = con.prepareStatement(query.getChild().getQuery())) {
-                        for (int i = 0; i < query.getChild().getParameters().length; i++) {
-                            childStmt.setString(i + 1, (String)row.get(query.getChild().getParameters()[i]));
-                        }
-
-                        ResultSet childSet = childStmt.executeQuery();
-                        List<String> childColumns = prepareMetaData(childSet);
-                        List<Map<String, ?>> childRows = new ArrayList<>();
-                        while (childSet.next()) {
-                            Map<String, Object> childRow = fillRow(childColumns, childSet);
-                            childRows.add(childRow);
-                        }
-
-                        row.put("Zchild", childRows);
-                        childSet.close();
-                    }
-                }
-
-                rows.add(row);
+        try (Connection con = connect()) {
+            String q = query.getQuery();
+            // Set up additional where clause if exists
+            if (query.hasExtWhere()) {
+                q = query.buildQuery(params);
             }
 
-            debug ("Results loaded: " + rows.size());
-            return rows;
+            debug ("query: " +  q);
+            try (PreparedStatement stmt = con.prepareStatement(q);
+                 ResultSet rSet = stmt.executeQuery()) {
+                debug("Statement executed.");
+                List<String> columns = prepareMetaData(rSet);
+
+                List<Map<String, ?>> rows = new ArrayList<>();
+                while (rSet.next()) {
+                    Map<String, Object> row = fillRow(columns, rSet);
+
+                    // Execute subquery if exists
+                    if (query.getChild() != null) {
+                        try (PreparedStatement childStmt = con.prepareStatement(query.getChild().getQuery())) {
+                            for (int i = 0; i < query.getChild().getParameters().length; i++) {
+                                childStmt.setString(i + 1, (String) row.get(query.getChild().getParameters()[i]));
+                            }
+
+                            ResultSet childSet = childStmt.executeQuery();
+                            List<String> childColumns = prepareMetaData(childSet);
+                            List<Map<String, ?>> childRows = new ArrayList<>();
+                            while (childSet.next()) {
+                                Map<String, Object> childRow = fillRow(childColumns, childSet);
+                                childRows.add(childRow);
+                            }
+
+                            row.put("Zchild", childRows);
+                            childSet.close();
+                        }
+                    }
+
+                    rows.add(row);
+                }
+
+                debug("Results loaded: " + rows.size());
+                return rows;
+            }
         }
         catch (Exception e) {
             debug (e.getMessage());
@@ -322,7 +334,9 @@ public class AptekaPlus {
 
                     case "json":
                     default:
-                        result = toJson (ap.loadGoods(args[5])).getBytes("utf-8");
+                        // Get additional parameters, if exists
+                        String extArgs[] = Arrays.copyOfRange(args, 8, args.length);
+                        result = toJson (ap.loadGoods(args[5], extArgs)).getBytes("utf-8");
                         debug ("converted to JSON");
                 }
 

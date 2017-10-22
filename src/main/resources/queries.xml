@@ -183,7 +183,7 @@
         ]]>
     </Query>
 
-    <Query name="DocTitles">
+    <Query name="DocTitles" extWhere="DateReg:Date">
         <![CDATA[
          select ID as TitleID,
             DateReg,
@@ -194,8 +194,9 @@
             SumCenaZak,
             SumDiscount
          from doctitles
-         where FlInOut = -1 and Destroyed = 0
-            --and ID = "238"
+         where 1=1
+            and FlInOut = -1 and Destroyed = 0
+            <extWhere>
          order by DateReg desc
         ]]>
     </Query>
