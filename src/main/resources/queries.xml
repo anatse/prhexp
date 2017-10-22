@@ -69,13 +69,13 @@
     <Query name="Nomen">
         <![CDATA[
             select Drugs->UniqCode as ID,
-                Drugs->ShortName as Name,
+                coalesce(Drugs->ShortName, substr(Drugs->FullName, 1, 100)) as Name,
                 Drugs->FullName as FullName,
                 Drugs->EdIzm->ShortName as UnitShortName,
                 Drugs->Producer->FullName as Producer,
                 Drugs->TypeNal->FullName as NdsPerc,
                 Drugs->EdIzm->FullName as UnitFullName,
-                Drugs->EdIzm->CodeRC as UnitCode
+                coalesce(Drugs->EdIzm->CodeRC, 796) as UnitCode
              FROM
                 DocData
             WHERE
@@ -102,7 +102,7 @@
     <Query name="InvoiceRow">
         <![CDATA[
             select
-                Drugs->LastObj->ShortName,
+                coalesce (Drugs->LastObj->ShortName, substr(Drugs->LastObj->FullName, 1, 100)) as ShortName,
                 Drugs->LastObj->FullName,
                 Quantity,
                 CenaUch,
@@ -204,7 +204,7 @@
         <![CDATA[
         select
              Drugs->FullName as DrugFullName,
-             Drugs->ShortName as DrugShortName,
+             coalesce (Drugs->ShortName, substr(Drugs->FullName, 1, 100)) as DrugShortName,
              Quantity,
              CenaRoz,
              sumCenaRoz,
