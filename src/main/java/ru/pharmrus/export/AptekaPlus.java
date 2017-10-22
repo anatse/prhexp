@@ -143,7 +143,7 @@ public class AptekaPlus {
             return Collections.EMPTY_LIST;
         }
 
-        if (query.getDependOn() != null) {
+        if (query.getDependOn() != null && !query.getDependOn().isEmpty()) {
             // There is only one dependency level allowed
             Query parent = loadQuery(query.getDependOn());
             if (parent == null) {

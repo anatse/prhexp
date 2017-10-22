@@ -69,11 +69,13 @@
     <Query name="Nomen">
         <![CDATA[
             select Drugs->UniqCode as ID,
-                Drugs->FullName as Name,
+                Drugs->ShortName as Name,
                 Drugs->FullName as FullName,
                 Drugs->EdIzm->ShortName as UnitShortName,
                 Drugs->Producer->FullName as Producer,
-                Drugs->TypeNal->FullName as NdsPerc
+                Drugs->TypeNal->FullName as NdsPerc,
+                Drugs->EdIzm->FullName as UnitFullName,
+                Drugs->EdIzm->CodeRC as UnitCode
              FROM
                 DocData
             WHERE
@@ -100,8 +102,8 @@
     <Query name="InvoiceRow">
         <![CDATA[
             select
-                Drugs->LastObj->FullName,
                 Drugs->LastObj->ShortName,
+                Drugs->LastObj->FullName,
                 Quantity,
                 CenaUch,
                 sumCenaUch,
@@ -202,6 +204,7 @@
         <![CDATA[
         select
              Drugs->FullName as DrugFullName,
+             Drugs->ShortName as DrugShortName,
              Quantity,
              CenaRoz,
              sumCenaRoz,
@@ -210,8 +213,7 @@
              sumCenaNDS,
              Quantity,
              comment,
-             docnpp,
-             Drugs->FullName as DrugFullName
+             docnpp
          from DocData
          where 1=1
              and FlInOut = -1
