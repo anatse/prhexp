@@ -223,6 +223,26 @@
         ]]>
     </Query>
 
+    <Query name="SoldDrugsReal" dependsOn="DocTitles" parameters="TitleID">
+        <![CDATA[
+        select
+             DataId->Drugs->FullName as DrugFullName,
+             substr(coalesce (DataId->Drugs->ShortName, DataId->Drugs->FullName), 1, 100) as DrugShortName,
+             Kol as Quantity,
+             ((DataID->CenaRozN*Kol)-sumDisc) as sumCenaRoz,
+             DataId->CenaRoz - (DataId->CenaRoz * Perc / 100) as CenaRoz,
+             Perc as DiscountPerc,
+             TypeOpl as PaymentType, -- 15 - cash, 18 - no-cash
+             sumDisc as discount
+         from DocDataReal
+         where 1=1
+             and DataId->FlInOut = -1
+             and DataId->destroyed = 0
+             and DataId->Docs->Titles->ID = ?
+         order by DataId->Drugs->FullName
+        ]]>
+    </Query>
+
     <Query name="BoughtDrugs">
         <![CDATA[
         select CenaRoz, CenaRozN, sumCenaRoz, sumCenaRozN, DataID, Drugs->FullName as DrugFullName,
