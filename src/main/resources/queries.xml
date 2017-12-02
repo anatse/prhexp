@@ -1,14 +1,12 @@
 <Queries>
     <Query name="Goods">
         <![CDATA[
-            select ID,
+           select DrugsID as ID,
                 -- Bar code of the goods in the batch
                 BarCode,
 
                 -- Remains of the goods in the batch
-                Ost,
-                OstFirst,
-                OstLast,
+                Sum(Ost) as Ost,
 
                 -- Name of drugs in this batch
                 DrugsID->LastObj->FullName as DrugsFullName,
@@ -26,18 +24,18 @@
                 -- Кол-во в упаковке
                 DrugsID->LastObj->Upak as Packaging,
                 DrugsID->LastObj->TradeTech as TradeTech, -- SprTradeTech,
-                DrugsID->LastObj->DrugsID->LastObj->FullName as DrugFullName, -- SprDrugsFull
 
                 -- Name of the supplier (contractor)
                 DocDataID->Supplier->LastObj->FullName as SupplierFullName,
                 -- Retail price
                 DocDataID->CenaRozN as RetailPrice
             from PartiesGoods
-	    where 1=1
+ 	    where 1=1
              and KprID = 1
              and DayFirst < {fn CURDATE}
              and DayLast != 99999
-        order by ost desc
+        group by DrugsID, DocDataID->CenaRozN, DrugsID->LastObj->Producer
+        order by DrugsID
         ]]>
     </Query>
     <!--
@@ -204,44 +202,62 @@
     <Query name="SoldDrugs" dependsOn="DocTitles" parameters="TitleID">
         <![CDATA[
         select
-             Drugs->FullName as DrugFullName,
-             substr(coalesce (Drugs->ShortName, Drugs->FullName), 1, 100) as DrugShortName,
-             Quantity,
-             CenaRoz,
-             sumCenaRoz,
-             Drugs->TypeNal->FullName as NdsPerc,
-             CenaNDS,
-             sumCenaNDS,
-             Quantity,
-             comment,
-             docnpp
-         from DocData
+             b.DataId->Drugs->FullName as DrugFullName,
+             substr(coalesce (b.DataId->Drugs->ShortName, b.DataId->Drugs->FullName), 1, 100) as DrugShortName,
+             b.Kol,
+             b.DataId->Docs->Titles->DateReg,
+             ((b.DataID->CenaRozN*b.Kol)-b.sumDisc) as sumCenaRoz,
+             b.DataId->CenaRoz - (b.DataId->CenaRoz * b.Perc / 100) as CenaRoz,
+             b.Perc as DiscountPerc,
+             b.TypeOpl as PaymentType, -- 15 - cash, 18 - no-cash
+             b.sumDisc as discount
+         from
+         DocDataReal b
          where 1=1
-             and FlInOut = -1
-             and destroyed = 0
-             and Docs->Titles->ID = ?
+            and FlInOut = -1
+            and b.DataID->destroyed = 0
+            and b.Kol < 0
+        order by DataId->Docs->Titles->DateReg
         ]]>
     </Query>
 
     <Query name="SoldDrugsReal" dependsOn="DocTitles" parameters="TitleID">
         <![CDATA[
         select
-             DataId->Drugs->FullName as DrugFullName,
-             substr(coalesce (DataId->Drugs->ShortName, DataId->Drugs->FullName), 1, 100) as DrugShortName,
-             Kol as Quantity,
-             ((DataID->CenaRozN*Kol)-sumDisc) as sumCenaRoz,
-             DataId->CenaRoz - (DataId->CenaRoz * Perc / 100) as CenaRoz,
-             Perc as DiscountPerc,
-             TypeOpl as PaymentType, -- 15 - cash, 18 - no-cash
-             sumDisc as discount
-         from DocDataReal
+            b.DataId->Drugs->FullName as DrugFullName,
+             substr(coalesce (b.DataId->Drugs->ShortName, b.DataId->Drugs->FullName), 1, 100) as DrugShortName,
+             a.Kol as Quantity,
+             ((b.DataID->CenaRozN*a.Kol)-b.sumDisc) as sumCenaRoz,
+             b.DataId->CenaRoz - (b.DataId->CenaRoz * b.Perc / 100) as CenaRoz,
+             b.Perc as DiscountPerc,
+             b.TypeOpl as PaymentType, -- 15 - cash, 18 - no-cash
+             b.sumDisc as discount
+        from (
+            select sum( Kol) as Kol,
+               coalesce(DataRealID, ID) as ID
+            from DocDataReal
+            where 1=1
+                 and DataId->FlInOut = -1
+                 and DataId->destroyed = 0
+                 and DataId->Docs->Titles->ID = ?
+             group by DataId->Docs->Titles->DateReg, coalesce(DataRealID, ID)
+            ) a,
+            DocDataReal b
          where 1=1
-             and DataId->FlInOut = -1
-             and DataId->destroyed = 0
-             and DataId->Docs->Titles->ID = ?
-         order by DataId->Drugs->FullName
-        ]]>
+            and b.ID = a.ID
+            --and a.Kol > 0
+         order by b.DataId->Drugs->FullName
+         ]]>
     </Query>
+
+    select sum( Kol) as Kol,
+    coalesce(DataRealID, ID) as ID
+    from DocDataReal
+    where 1=1
+    and DataId->FlInOut = -1
+    and DataId->destroyed = 0
+    and DataId->Docs->Titles->ID = 59
+    group by DataId->Docs->Titles->DateReg, coalesce(DataRealID, ID)
 
     <Query name="BoughtDrugs">
         <![CDATA[
