@@ -1,7 +1,8 @@
 <Queries>
     <Query name="Goods">
         <![CDATA[
-           select DrugsID as ID,
+           select to_char(DrugsID) || '-' || to_char(DocDataID->CenaRozN) || '-' || coalesce(to_char(DrugsID->LastObj->Producer), 'X') as ID,
+                DrugsID,
                 -- Bar code of the goods in the batch
                 BarCode,
 
