@@ -67,14 +67,17 @@
     -->
     <Query name="Nomen">
         <![CDATA[
-            select Drugs->UniqCode as ID,
+            select distinct Drugs->UniqCode as ID,
                 substr(coalesce(Drugs->ShortName, Drugs->FullName), 1, 100) as Name,
                 Drugs->FullName as FullName,
                 Drugs->EdIzm->ShortName as UnitShortName,
                 Drugs->Producer->FullName as Producer,
                 Drugs->TypeNal->FullName as NdsPerc,
                 Drugs->EdIzm->FullName as UnitFullName,
-                coalesce(Drugs->EdIzm->CodeRC, 796) as UnitCode
+                coalesce(Drugs->EdIzm->CodeRC, 796) as UnitCode,
+                Drugs,
+                CodeDrugs,
+                NomN as Articul
              FROM
                 DocData
             WHERE
