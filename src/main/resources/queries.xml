@@ -75,9 +75,9 @@
                 Drugs->TypeNal->FullName as NdsPerc,
                 Drugs->EdIzm->FullName as UnitFullName,
                 coalesce(Drugs->EdIzm->CodeRC, 796) as UnitCode,
-                Drugs,
+                Drugs as Articul,
                 CodeDrugs,
-                NomN as Articul
+                NomN
              FROM
                 DocData
             WHERE
@@ -101,7 +101,7 @@
         % НДС в рознице
         Комитент
     -->
-    <Query name="InvoiceRow">
+    <Query name="InvoiceRow" dependsOn="DocTitlesIncome" parameters="TitleID">
         <![CDATA[
             select
                 substr (coalesce (Drugs->LastObj->ShortName, Drugs->LastObj->FullName), 1, 100) as ShortName,
@@ -110,20 +110,36 @@
                 CenaUch,
                 sumCenaUch,
                 Drugs->LastObj->TypeNal->LastObj->FullName as NdsPerc,
-                DocData.sumCenaNDS,
+                sumCenaNDS,
                 Country->ShortName as Country,
                 cenaRozN,
                 sumCenaRozN,
                 PercSaleNDS,
-                Docs->Titles->NumberOfNakl,
-                Docs->Titles->CodeofSupplier->LastObj->FullName as Supplier,
                 Comment
             FROM
                 DocData
-            WHERE
-                Destroyed = 0 and FlInOut=1
+            WHERE 1=1
+                and Docs->Titles->ID = ?
+                and Destroyed = 0
+                and FlInOut=1
                 and Docs->Titles->CodeOfSupplier is not null and Docs->DocType->TableName<>100
                 and Docs->DocType->TableName <> 106
+        ]]>
+    </Query>
+
+    <Query name="DocTitlesIncome" extWhere="DateReg:Date">
+        <![CDATA[
+         select ID as TitleID,
+            DateReg,
+            SumCenaRoz,
+            SumCenaZak,
+            NumberOfNakl,
+            CodeofSupplier->LastObj->FullName as Supplier
+         from doctitles
+         where 1=1
+            and FlInOut = 1 and Destroyed = 0
+            <extWhere>
+         order by DateReg desc
         ]]>
     </Query>
 
@@ -200,28 +216,6 @@
             and FlInOut = -1 and Destroyed = 0
             <extWhere>
          order by DateReg desc
-        ]]>
-    </Query>
-
-    <Query name="SoldDrugs" dependsOn="DocTitles" parameters="TitleID">
-        <![CDATA[
-        select
-             b.DataId->Drugs->FullName as DrugFullName,
-             substr(coalesce (b.DataId->Drugs->ShortName, b.DataId->Drugs->FullName), 1, 100) as DrugShortName,
-             b.Kol,
-             b.DataId->Docs->Titles->DateReg,
-             ((b.DataID->CenaRozN*b.Kol)-b.sumDisc) as sumCenaRoz,
-             b.DataId->CenaRoz - (b.DataId->CenaRoz * b.Perc / 100) as CenaRoz,
-             b.Perc as DiscountPerc,
-             b.TypeOpl as PaymentType, -- 15 - cash, 18 - no-cash
-             b.sumDisc as discount
-         from
-         DocDataReal b
-         where 1=1
-            and FlInOut = -1
-            and b.DataID->destroyed = 0
-            and b.Kol < 0
-        order by DataId->Docs->Titles->DateReg
         ]]>
     </Query>
 

@@ -170,7 +170,7 @@ public class AptekaPlus {
 
             debug ("query: " +  q);
             try (PreparedStatement stmt = con.prepareStatement(q);
-                 ResultSet rSet = stmt.executeQuery()) {
+                ResultSet rSet = stmt.executeQuery()) {
                 debug("Statement executed.");
                 List<String> columns = prepareMetaData(rSet);
 
