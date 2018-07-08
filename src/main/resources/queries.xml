@@ -277,6 +277,79 @@
         ]]>
     </Query>
 
+    <Query name="FrozenMoney">
+        <![CDATA[
+        select BoughtDrugs.UniqCode,
+         BoughtDrugs.FullName,
+         BoughtDrugs.BoughtQuantitySum,
+         coalesce(SoldDrugs.SoldQuantitySum, 0) as SoldQuantitySum,
+         BoughtDrugs.BoughtCost,
+         BoughtDrugs.CenaUch,
+         BoughtDrugs.BoughtQuantitySum - coalesce(SoldDrugs.SoldQuantitySum, 0) as Diff,
+         (BoughtDrugs.BoughtQuantitySum - coalesce(SoldDrugs.SoldQuantitySum, 0)) * CenaUch as FrozenMoney,
+         BoughtDrugs.DateReg
+         from (
+              select
+                 Drugs->UniqCode,
+                 Drugs->FullName,
+                 CenaUch,
+                 CenaUch * sum(Quantity) as BoughtCost,
+                 max(Docs->Titles->DateReg) as DateReg,
+                 sum(Quantity) as BoughtQuantitySum
+              from DocData
+              where 1=1
+                 and FlInOut = 1
+                 and destroyed = 0
+              group by Drugs->UniqCode) as BoughtDrugs left outer join
+            (
+              select b.UniqCode,
+                 b.FullName,
+                 sum(Kol) as SoldQuantitySum
+              from (
+                select
+                  DataId->Drugs->UniqCode,
+                  DataId->Drugs->FullName,
+                  sum(Kol) as Kol
+                from DocDataReal
+                where 1=1
+                   and DataId->FlInOut = -1
+                   and DataId->destroyed = 0
+                group by DataId->Docs->Titles->DateReg, coalesce(DataRealID, ID)) as b
+              group by b.UniqCode) as SoldDrugs
+         on BoughtDrugs.UniqCode = SoldDrugs.UniqCode
+         order by 8 desc
+        ]]>
+    </Query>
+
+    <Query name="remains">
+        <![CDATA[
+        select
+             DocDataID->Discount,
+             DocDataID->PercSupplier as NDS_PR,
+             DocDataID->sumCenaNDS as NDS_SUM,
+             DocDataID->CenaUch as PRICE_NAKE,
+             DocDataID->sumCenaUch as SUM_NAKED,
+             DocDataID->CenaProiz as PRICE_MAKE,
+             DECODE (DocDataID->CenaReest, 0.0, NULL, DocDataID->CenaReest) as PRICE_REES,
+             CASE
+                 WHEN DocDataID->CenaReest > 0.0 THEN 1
+                 ELSE 0
+             END as ISLIFE,
+             Sum(Ost) as Quantity,
+             DocDataID->SrokGodn as DATE_VALID,
+             DocDataID->BarFact as SCANCODE,
+             DocDataID->BarCode as CURRENCY,
+             DocDataID->CodeDrugS as CODE,
+             DrugsID->FullName as NAME,
+             DrugsID
+            from PartiesGoods
+        where 1=1
+             and KprID = 1
+             and Ost > 0
+        group by DocDataID
+        order by DrugsID->FullName
+        ]]>
+    </Query>
 
     <Query name="Test">
         <![CDATA[TestQuery]]>
