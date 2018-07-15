@@ -1,4 +1,6 @@
-# PhrExp привествует тебя!
+# PhrExp
+
+https://www.infoq.com/presentations/akka-jctools?utm_source=link&utm_medium=twitter&utm_campaign=calendar
 
 Программа предназначена для экспорта данных из системы [М-Аптека+](http://www.m-apteka.com/m-apteka-plus/o-programme-m-apteka-plyus/). 
 В основном для загрузки в 1С.
